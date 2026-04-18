@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Booth Voting App</title>
+    <style>
+        :root {
+            --frame-blue: #00d2ff;
+            --frame-border: #0055ff;
+            --glow-red: rgba(255, 77, 77, 0.6);
+            --glow-green: rgba(74, 222, 128, 0.6);
+            --bg-dark-blue: #0b1120;
+            --inner-white: #ffffff;
+            --nav-dark: #0c1e3a;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-dark-blue);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            position: relative;
+        }
+
+        /* زر ملء الشاشة */
+        .fullscreen-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 45px;
+            height: 45px;
+            background: var(--nav-dark);
+            border: 1px solid var(--frame-blue);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transition: transform 0.2s;
+        }
+
+        /* زر التصفير (مخفي نسبياً للمشرف) */
+        .reset-btn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 45px;
+            height: 45px;
+            background: rgba(12, 30, 58, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        .reset-btn:hover {
+            background: #e63946;
+            border-color: white;
+        }
+
+        .reset-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: rgba(255, 255, 255, 0.4);
+        }
+
+        .reset-btn:hover svg {
+            fill: white;
+        }
+
+        .fullscreen-btn:active, .reset-btn:active {
+            transform: scale(0.9);
+        }
+
+        .fullscreen-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--frame-blue);
+        }
+
+        /* الإطار الرئيسي الخارجي */
+        .outer-frame {
+            width: 96vw;
+            height: 92vh;
+            background: #dce7f3; 
+            border: 10px solid #002d5a;
+            border-radius: 45px;
+            position: relative;
+            padding: 0;
+            box-shadow: 0 0 40px rgba(0, 210, 255, 0.4), inset 0 0 25px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .neon-glow {
+            position: absolute;
+            top: -6px; left: -6px; right: -6px; bottom: -6px;
+            border: 4px solid var(--frame-blue);
+            border-radius: 50px;
+            pointer-events: none;
+            box-shadow: 0 0 20px var(--frame-blue);
+            z-index: 50;
+        }
+
+        .top-banner {
+            width: 100%;
+            height: 12%;
+            background: linear-gradient(90deg, #001a33 0%, #0055ff 50%, #001a33 100%);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+
+        .top-banner::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(circle, rgba(255,255,255,0.15) 1.5px, transparent 1.5px);
+            background-size: 25px 25px;
+            opacity: 0.6;
+        }
+
+        .inner-content {
+            flex: 1;
+            width: 100%;
+            background: radial-gradient(circle at center, #ffffff 0%, #e1e9f2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            padding: 20px;
+        }
+
+        .title {
+            font-size: 5.5vh;
+            font-weight: 900;
+            color: #004d4d;
+            margin-bottom: 4vh;
+            text-align: center;
+            max-width: 90%;
+            line-height: 1.2;
+        }
+
+        .elements-container {
+            display: flex;
+            gap: 6vw;
+            align-items: flex-start;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .unit {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .vote-card {
+            width: 32vw;
+            height: 25vh;
+            max-width: 400px;
+            max-height: 280px;
+            border-radius: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.1s;
+            position: relative;
+        }
+
+        .vote-card:active { transform: scale(0.95); }
+
+        .red {
+            background: linear-gradient(145deg, #ff5f5f, #e63946);
+            border: 8px solid #ffcccc;
+            box-shadow: 0 15px 30px var(--glow-red);
+        }
+
+        .green {
+            background: linear-gradient(145deg, #4ade80, #22c55e);
+            border: 8px solid #ccffdd;
+            box-shadow: 0 15px 30px var(--glow-green);
+        }
+
+        .emoji {
+            font-size: 15vh;
+            filter: drop-shadow(0 5px 10px rgba(0,0,0,0.2));
+        }
+
+        .counter-display {
+            width: 28vw;
+            max-width: 350px;
+            height: 8vh;
+            background: #ffffff;
+            border-radius: 15px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 6vh;
+            font-weight: 800;
+            color: #1e293b;
+            box-shadow: inset 0 3px 10px rgba(0,0,0,0.1), 0 5px 15px rgba(0,0,0,0.05);
+            border: 2px solid #e2e8f0;
+        }
+
+        .nav-btn {
+            position: absolute;
+            bottom: 4%;
+            right: 4%;
+            width: 120px;
+            height: 60px;
+            background: var(--nav-dark);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 100;
+        }
+
+        .nav-btn svg {
+            width: 35px;
+            height: 35px;
+            fill: white;
+        }
+
+        .bottom-glow-strip {
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 5px;
+            background: var(--frame-blue);
+            box-shadow: 0 0 20px var(--frame-blue);
+            border-radius: 50%;
+            opacity: 0.6;
+        }
+
+        /* رسالة التنبيه المخصصة بديلة لـ alert */
+        #customModal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 25px;
+            text-align: center;
+            width: 300px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+
+        .modal-content h2 { margin-bottom: 20px; color: #333; font-size: 20px; }
+
+        .modal-btns { display: flex; gap: 10px; justify-content: center; }
+
+        .modal-btn {
+            padding: 10px 25px;
+            border-radius: 10px;
+            cursor: pointer;
+            border: none;
+            font-weight: bold;
+        }
+
+        .confirm-btn { background: #e63946; color: white; }
+        .cancel-btn { background: #cbd5e1; color: #333; }
+
+        #alertBox {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #e63946;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 2000;
+            display: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="alertBox">لا يمكن تفعيل ملء الشاشة في هذه البيئة. يرجى فتح الرابط مباشرة في المتصفح.</div>
+
+    <!-- نافذة تأكيد التصفير المخصصة -->
+    <div id="customModal">
+        <div class="modal-content">
+            <h2>هل أنت متأكد من تصفير العدادات؟</h2>
+            <div class="modal-btns">
+                <button class="modal-btn confirm-btn" onclick="resetCounters()">نعم، تصفير</button>
+                <button class="modal-btn cancel-btn" onclick="closeModal()">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- زر التصفير (للمشرف) -->
+    <div class="reset-btn" onclick="openModal()" title="تصفير العدادات">
+        <svg viewBox="0 0 24 24">
+            <path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+        </svg>
+    </div>
+
+    <!-- زر ملء الشاشة الخارجي -->
+    <div class="fullscreen-btn" onclick="toggleFullscreen()" title="ملء الشاشة">
+        <svg viewBox="0 0 24 24" id="fullscreenIcon">
+            <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+        </svg>
+    </div>
+
+    <div class="outer-frame">
+        <div class="neon-glow"></div>
+        <div class="top-banner"></div>
+
+        <div class="inner-content">
+            <h1 id="pageTitle" class="title">زيارتك للبوث أضاف لك معلومة جديده؟</h1>
+
+            <div class="elements-container">
+                <div class="unit">
+                    <div class="vote-card red" onclick="handleVote('dislike')">
+                        <span class="emoji">👎</span>
+                    </div>
+                    <div id="displayDislike" class="counter-display">0</div>
+                </div>
+
+                <div class="unit">
+                    <div class="vote-card green" onclick="handleVote('like')">
+                        <span class="emoji">👍</span>
+                    </div>
+                    <div id="displayLike" class="counter-display">0</div>
+                </div>
+            </div>
+
+            <div class="nav-btn" onclick="toggleView()">
+                <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+            </div>
+
+            <div class="bottom-glow-strip"></div>
+        </div>
+    </div>
+
+<script>
+    const STORAGE_KEY = 'booth_app_v2_local';
+    const TITLE_VOTE = 'زيارتك للبوث أضاف لك معلومة جديده؟';
+    const TITLE_RESULTS = 'عدد المصوتين';
+    
+    let currentMode = 'voting'; 
+    let scores = { like: 0, dislike: 0 };
+
+    function init() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) scores = JSON.parse(saved);
+        updateCounters();
+    }
+
+    function showAlert(msg) {
+        const box = document.getElementById('alertBox');
+        box.innerText = msg;
+        box.style.display = 'block';
+        setTimeout(() => box.style.display = 'none', 3000);
+    }
+
+    // وظائف النافذة المنبثقة للتصفير
+    function openModal() {
+        document.getElementById('customModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('customModal').style.display = 'none';
+    }
+
+    function resetCounters() {
+        scores = { like: 0, dislike: 0 };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(scores));
+        // تصفير sessionStorage أيضاً إذا كان مستخدماً
+        sessionStorage.removeItem(STORAGE_KEY);
+        updateCounters();
+        closeModal();
+    }
+
+    function toggleFullscreen() {
+        try {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+                const docElm = document.documentElement;
+                if (docElm.requestFullscreen) {
+                    docElm.requestFullscreen().catch(e => showAlert("سياسة المتصفح تمنع ملء الشاشة هنا."));
+                } else if (docElm.webkitRequestFullscreen) {
+                    docElm.webkitRequestFullscreen();
+                } else if (docElm.msRequestFullscreen) {
+                    docElm.msRequestFullscreen();
+                } else {
+                    showAlert("هذا المتصفح لا يدعم خاصية ملء الشاشة.");
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        } catch (err) {
+            showAlert("حدث خطأ أثناء محاولة تبديل وضع ملء الشاشة.");
+            console.error(err);
+        }
+    }
+
+    function handleVote(type) {
+        if (currentMode !== 'voting') return;
+        scores[type]++;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(scores));
+        updateCounters();
+        
+        const btn = event.currentTarget;
+        btn.style.opacity = "0.7";
+        setTimeout(() => btn.style.opacity = "1", 100);
+    }
+
+    function updateCounters() {
+        document.getElementById('displayLike').innerText = scores.like;
+        document.getElementById('displayDislike').innerText = scores.dislike;
+    }
+
+    function toggleView() {
+        const title = document.getElementById('pageTitle');
+        const counters = document.querySelectorAll('.counter-display');
+        const voteCards = document.querySelectorAll('.vote-card');
+
+        if (currentMode === 'voting') {
+            currentMode = 'results';
+            title.innerText = TITLE_RESULTS;
+            counters.forEach(c => c.style.display = 'flex');
+            voteCards.forEach(v => v.style.cursor = 'default');
+        } else {
+            currentMode = 'voting';
+            title.innerText = TITLE_VOTE;
+            counters.forEach(c => c.style.display = 'none');
+            voteCards.forEach(v => v.style.cursor = 'pointer');
+        }
+    }
+
+    init();
+    document.addEventListener('contextmenu', e => e.preventDefault());
+</script>
+</body>
+</html>
